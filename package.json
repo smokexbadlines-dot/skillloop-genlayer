@@ -1,0 +1,19 @@
+{
+  "name": "skillloop-genlayer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "verify:live": "node scripts/verify-live.mjs"
+  },
+  "dependencies": {
+    "genlayer-js": "1.1.8"
+  },
+  "devDependencies": {
+    "vite": "7.1.12"
+  }
+}
