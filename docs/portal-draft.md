@@ -14,6 +14,8 @@
 
 **Contract explorer:** https://explorer-studio.genlayer.com/address/0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e
 
-**Frontend:** https://skillloop-genlayer.opalfairy1.chatgpt.site/ (currently owner-private; reviewers need access before using this link).
+**Frontend:** https://skillloop-genlayer.opalfairy1.chatgpt.site/ (public; reviewers can inspect without connecting a wallet).
 
-**Source and proof:** `proof/manifest.json` contains the transaction hashes. A local source bundle is available, but no public GitHub repository is authorized or linked. Keep the Portal submission as a draft while its required GitHub Repository field is empty.
+**GitHub Repository:** https://github.com/smokexbadlines-dot/skillloop-genlayer
+
+**Source and proof:** The public repository contains the contract, frontend, tests, tutorial, demo script, `proof/manifest.json`, and `pnpm verify:live`. The recorded proof covers offer creation, three FIT judgments, a NO_FIT judgment, cycle reservation, and all three acceptances. It does not cover live service delivery or confirmation.

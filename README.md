@@ -4,6 +4,8 @@ SkillLoop is a GenLayer Native contributor exchange. Three independent people ca
 
 **Deployed Studionet contract:** [`0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e`](https://explorer-studio.genlayer.com/address/0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e). Studionet is a temporary development network; its state can reset.
 
+**Live app:** [skillloop-genlayer.opalfairy1.chatgpt.site](https://skillloop-genlayer.opalfairy1.chatgpt.site/). The public board needs no wallet to inspect. The recorded demo proves matching, cycle reservation, and three-member acceptance; no delivery has been confirmed.
+
 ## What is native here
 
 The contract calls `gl.nondet.exec_prompt` twice: when a member posts an offer, to reject vague commitments, and when anyone reviews a directed giver-to-receiver pair, to decide `FIT`, `NO_FIT`, or `UNCLEAR`. For each nondeterministic call, validators independently repeat the judgment and compare the single state-affecting verdict exactly. Anything ambiguous fails closed. The contract does **not** ask a model to pick winners or handle numeric bookkeeping. It scans reviewed edges in ascending offer-ID order and reserves the first valid three-member cycle atomically.
@@ -39,6 +41,8 @@ To build a static frontend:
 ```powershell
 pnpm build
 ```
+
+Run `pnpm test:frontend` for EIP-1193 wallet and transaction-status checks, and `pnpm verify:live` to recheck the recorded finalized transactions and board state on Studionet.
 
 The static output is in `dist/`.
 

@@ -17,6 +17,7 @@ const state = {
   busy: false,
   txId: sessionStorage.getItem('skillloop_tx') || '',
   txStatus: '',
+  liveError: '',
 };
 
 const sampleBoard = () => ({
@@ -71,6 +72,7 @@ async function loadLive() {
   if (!board || !Array.isArray(board.offers) || !Array.isArray(board.edges)) throw new Error('Contract did not return a SkillLoop board.');
   state.board = board;
   state.mode = 'live';
+  state.liveError = '';
   localStorage.setItem('skillloop_address', state.address);
   render();
 }
@@ -209,7 +211,7 @@ function renderSettings() {
 }
 
 function renderProof() {
-  if (state.mode !== 'live' || state.address.toLowerCase() !== proof.contract.toLowerCase()) return '';
+  if (state.address.toLowerCase() !== proof.contract.toLowerCase()) return '';
   const links = [
     ['Three FIT judgments', 'fit_1_to_3'],
     ['NO_FIT judgment', 'no_fit_1_to_2'],
@@ -223,7 +225,7 @@ function render() {
   const board = state.board;
   $('#app').innerHTML = `<header class="topbar"><div class="shell topbar-inner"><a class="brand" href="#top"><span class="brand-mark"></span>SkillLoop</a><div class="top-actions"><span class="mode ${state.mode === 'live' ? 'live' : ''}"><i class="mode-dot"></i>${state.mode === 'live' ? 'Studionet' : 'Sample board'}</span>${button(state.wallet ? short(state.wallet) : 'Connect wallet', 'connect', '', 'small')}</div></div></header>
     <main id="top"><section class="hero"><div class="shell hero-grid"><div><span class="eyebrow">GenLayer Native · Contributor exchange</span><h1>Give your skill.<br><em>Get one back.</em></h1><p class="hero-copy">A three-way exchange for independent builders. GenLayer validators judge whether each offer meets another member's request; contract code finds and reserves a complete cycle.</p><div class="hero-buttons">${button('Explore offers', 'tab', 'data-tab="board"', 'primary')}${button('See the cycle', 'tab', 'data-tab="cycles"', 'ghost')}</div><p class="hero-note">No GEN escrow in this version. Delivery confirmation is a member action.</p></div><div class="orbit" aria-hidden="true"><div class="orbit-line"></div><div class="orb one"><strong>API testing</strong><span>gives tests · wants docs</span></div><div class="orb two"><strong>Documentation</strong><span>gives docs · wants audit</span></div><div class="orb three"><strong>Accessibility</strong><span>gives audit · wants tests</span></div></div></div></section>
-    <section class="section"><div class="shell"><div class="notice">${state.mode === 'sample' ? '<b>Sample board:</b> These offers and judgments are examples stored in this browser. They are not validator results or onchain proof.' : '<b>Live Studionet:</b> Board state is read from the configured contract. Verify each transaction in the Explorer after finalization.'}</div><div class="stats"><div class="stat"><strong>${board.offer_count}</strong><span>Offers posted</span></div><div class="stat"><strong>${board.edges.filter((e) => e.verdict === 'FIT').length}</strong><span>FIT edges</span></div><div class="stat"><strong>${board.cycle_count}</strong><span>Cycles formed</span></div><div class="stat"><strong>${board.cycles.filter((c) => c.status === 'COMPLETED').length}</strong><span>Completed cycles shown</span></div></div>
+    <section class="section"><div class="shell"><div class="notice">${state.mode === 'sample' ? '<b>Sample board:</b> These offers and judgments are examples stored in this browser. They are not validator results or onchain proof.' : '<b>Live Studionet:</b> Board state is read from the configured contract. Verify each transaction in the Explorer after finalization.'}</div>${state.liveError ? `<div class="notice" style="margin-top:12px"><b>Live read unavailable:</b> ${esc(state.liveError)}. The recorded Explorer proof below remains available; the board shown here is only a sample.</div>` : ''}<div class="stats"><div class="stat"><strong>${board.offer_count}</strong><span>Offers posted</span></div><div class="stat"><strong>${board.edges.filter((e) => e.verdict === 'FIT').length}</strong><span>FIT edges</span></div><div class="stat"><strong>${board.cycle_count}</strong><span>Cycles formed</span></div><div class="stat"><strong>${board.cycles.filter((c) => c.status === 'COMPLETED').length}</strong><span>Completed cycles shown</span></div></div>
     ${state.txId ? `<div class="notice" style="margin-top:16px"><b>Latest transaction:</b> <a class="tx" href="${explorer(state.txId)}" target="_blank" rel="noopener noreferrer">${esc(state.txId)}</a> · ${esc(state.txStatus || 'Tracking may be resumed after refresh')} ${sessionStorage.getItem('skillloop_tx') ? button('Resume tracking', 'resume', '', 'small') : ''}</div>` : ''}
     <nav class="tabs" aria-label="App sections">${[['board','Offer board'],['review','Match review'],['cycles','Cycles'],['create','Create offer']].map(([id,label]) => `<button class="tab ${state.tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}">${label}</button>`).join('')}</nav>
     <section id="panel">${state.tab === 'board' ? renderBoard() : state.tab === 'review' ? renderReview() : state.tab === 'cycles' ? renderCycles() : renderCreate()}</section>${renderProof()}${renderSettings()}</div></section></main>
@@ -235,7 +237,7 @@ function render() {
 async function handleClick(buttonEl) {
   const action = buttonEl.dataset.action;
   if (action === 'tab') { state.tab = buttonEl.dataset.tab; render(); $('#panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
-  if (action === 'sample') { state.mode = 'sample'; state.address = ''; state.board = sampleBoard(); localStorage.removeItem('skillloop_address'); render(); return; }
+  if (action === 'sample') { state.mode = 'sample'; state.address = ''; state.board = sampleBoard(); state.liveError = ''; localStorage.removeItem('skillloop_address'); render(); return; }
   if (action === 'connect') return connectWallet();
   if (action === 'resume') { if (state.txId) return track(state.txId); return; }
   if (action === 'clear') return write('clear_next_cycle');
@@ -265,4 +267,4 @@ document.addEventListener('submit', async (event) => {
 window.ethereum?.on?.('accountsChanged', () => { state.wallet = ''; render(); toast('Wallet account changed. Connect again before writing.'); });
 
 render();
-if (state.mode === 'live') loadLive().catch((error) => { state.mode = 'sample'; state.board = sampleBoard(); render(); toast(`Could not load configured contract: ${error.message}`, true); });
+if (state.mode === 'live') loadLive().catch((error) => { state.mode = 'sample'; state.board = sampleBoard(); state.liveError = error.message; render(); toast(`Could not load configured contract: ${error.message}`, true); });
