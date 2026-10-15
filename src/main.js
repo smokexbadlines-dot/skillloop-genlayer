@@ -18,6 +18,7 @@ const state = {
   txId: sessionStorage.getItem('skillloop_tx') || '',
   txStatus: '',
   liveError: '',
+  offerDraft: null,
 };
 
 const sampleBoard = () => ({
@@ -213,8 +214,9 @@ function renderCycles() {
 }
 
 function renderCreate() {
+  const draft = state.offerDraft || {};
   return `<div class="section-head"><div><span class="eyebrow">Join the loop</span><h2>Post a concrete offer</h2><span class="muted">Name a checkable software deliverable on both sides of the exchange.</span></div></div>
-    <div class="side-by-side"><form id="offer-form" class="card"><div class="fields"><label class="field full">Short title<input name="title" maxlength="80" placeholder="API reference documentation" required /></label><label class="field">I can give<textarea name="gives" maxlength="300" placeholder="Write API reference docs for a Python REST API" required></textarea><small>What will the next member receive?</small></label><label class="field">I want<textarea name="wants" maxlength="300" placeholder="Audit keyboard navigation in a React dashboard" required></textarea><small>What must another member offer?</small></label><label class="field full">Offer expires<input name="expires" type="date" required /></label></div><div class="form-actions"><button type="submit" class="button primary" ${state.busy ? 'disabled' : ''}>Create offer</button><span class="muted" style="font-size:12px">${state.mode === 'live' ? 'Wallet signature required' : 'Sample board only'}</span></div></form>
+    <div class="side-by-side"><form id="offer-form" class="card"><div class="fields"><label class="field full">Short title<input name="title" maxlength="80" placeholder="API reference documentation" value="${esc(draft.title || '')}" required /></label><label class="field">I can give<textarea name="gives" maxlength="300" placeholder="Write API reference docs for a Python REST API" required>${esc(draft.gives || '')}</textarea><small>What will the next member receive?</small></label><label class="field">I want<textarea name="wants" maxlength="300" placeholder="Audit keyboard navigation in a React dashboard" required>${esc(draft.wants || '')}</textarea><small>What must another member offer?</small></label><label class="field full">Offer expires<input name="expires" type="date" required /></label></div><div class="form-actions"><button type="submit" class="button primary" ${state.busy ? 'disabled' : ''}>Create offer</button><span class="muted" style="font-size:12px">${state.mode === 'live' ? 'Wallet signature required' : 'Sample board only'}</span></div></form>
     <div class="card"><h3>How the loop works</h3><p>01 — Each person posts one offer and one request. Validators reject vague descriptions.</p><p>02 — Anyone requests a judgment on one proposed giver → receiver edge.</p><p>03 — The contract picks the lowest-ID compatible triple, then reserves all three offers together.</p><p>04 — All three accept. Each giver posts a delivery URL, and only its receiver can confirm.</p></div></div>`;
 }
 
@@ -243,7 +245,7 @@ function render() {
     <section id="panel">${state.tab === 'board' ? renderBoard() : state.tab === 'review' ? renderReview() : state.tab === 'cycles' ? renderCycles() : renderCreate()}</section>${renderProof()}${renderSettings()}</div></section></main>
     <footer class="footer"><div class="shell footer-inner"><span>SkillLoop · Semantic matching, deterministic clearing</span><span>Studionet · Experimental software service commitments</span></div></footer>`;
   const expiry = $('#offer-form input[name="expires"]');
-  if (expiry) { expiry.min = new Date(Date.now() + 2*86400000).toISOString().slice(0,10); expiry.max = new Date(Date.now() + 59*86400000).toISOString().slice(0,10); expiry.value = new Date(Date.now() + 14*86400000).toISOString().slice(0,10); }
+  if (expiry) { expiry.min = new Date(Date.now() + 2*86400000).toISOString().slice(0,10); expiry.max = new Date(Date.now() + 59*86400000).toISOString().slice(0,10); expiry.value = state.offerDraft?.expires || new Date(Date.now() + 14*86400000).toISOString().slice(0,10); }
 }
 
 async function handleClick(buttonEl) {
@@ -272,7 +274,7 @@ document.addEventListener('submit', async (event) => {
   try {
     if (event.target.id === 'address-form') { state.address = $('#address-input').value.trim(); await loadLive(); toast('Loaded live SkillLoop board.'); }
     if (event.target.id === 'review-form') { const data = new FormData(event.target); const giver = Number(data.get('giver')); const receiver = Number(data.get('receiver')); if (giver === receiver) throw new Error('Select two different offers.'); if (state.board.edges.some((edge) => edge.giver === giver && edge.receiver === receiver)) throw new Error('This pair has already been reviewed.'); await write('review_match', [giver, receiver]); }
-    if (event.target.id === 'offer-form') { const data = new FormData(event.target); const expires = Math.floor(new Date(`${data.get('expires')}T12:00:00Z`).getTime()/1000); const secondsAway = expires - Date.now()/1000; if (secondsAway < 86400 || secondsAway > 60*86400) throw new Error('Expiry must be 1–60 days away.'); await write('create_offer', [data.get('title').trim(), data.get('gives').trim(), data.get('wants').trim(), expires]); }
+    if (event.target.id === 'offer-form') { const data = new FormData(event.target); const draft = { title: data.get('title').trim(), gives: data.get('gives').trim(), wants: data.get('wants').trim(), expires: data.get('expires') }; state.offerDraft = draft; const expires = Math.floor(new Date(`${draft.expires}T12:00:00Z`).getTime()/1000); const secondsAway = expires - Date.now()/1000; if (secondsAway < 86400 || secondsAway > 60*86400) throw new Error('Expiry must be 1–60 days away.'); await write('create_offer', [draft.title, draft.gives, draft.wants, expires]); state.offerDraft = null; render(); }
   } catch (error) { toast(error?.message || String(error), true); }
 });
 
