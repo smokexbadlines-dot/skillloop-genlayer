@@ -189,8 +189,18 @@ function renderBoard() {
 }
 
 function renderReview() {
-  const options = state.board.offers.map((o) => `<option value="${o.id}">#${o.id} ${esc(o.title)}</option>`).join('');
-  const rows = state.board.edges.map((edge) => `<tr><td>#${edge.giver} ${esc(state.board.offers.find((o) => o.id === edge.giver)?.title || '')}</td><td>→ #${edge.receiver} ${esc(state.board.offers.find((o) => o.id === edge.receiver)?.title || '')}</td><td><span class="tag ${tagClass(edge.verdict)}">${esc(edge.verdict)}</span></td></tr>`).join('');
+  const offers = state.board.offers;
+  const options = offers.map((o) => `<option value="${o.id}">#${o.id} ${esc(o.title)}</option>`).join('');
+  const recordedProof = state.mode === 'live' && state.address.toLowerCase() === proof.contract.toLowerCase() ? {
+    '1:3:FIT': proof.transactions.fit_1_to_3,
+    '3:2:FIT': proof.transactions.fit_3_to_2,
+    '2:1:FIT': proof.transactions.fit_2_to_1,
+    '1:2:NO_FIT': proof.transactions.no_fit_1_to_2,
+  } : {};
+  const rows = state.board.edges.map((edge) => {
+    const tx = recordedProof[`${edge.giver}:${edge.receiver}:${edge.verdict}`];
+    return `<tr><td>#${edge.giver} ${esc(offers.find((o) => o.id === edge.giver)?.title || '')}</td><td>→ #${edge.receiver} ${esc(offers.find((o) => o.id === edge.receiver)?.title || '')}</td><td><span class="tag ${tagClass(edge.verdict)}">${esc(edge.verdict)}</span>${tx ? ` <a href="${explorer(tx)}" target="_blank" rel="noopener noreferrer" aria-label="Explorer proof for offer ${edge.giver} to offer ${edge.receiver}">Proof ↗</a>` : ''}</td></tr>`;
+  }).join('');
   return `<div class="section-head"><div><span class="eyebrow">Validator judgment</span><h2>One edge at a time</h2><span class="muted">A FIT edge means the giver's written offer covers the receiver's request.</span></div></div>
     <div class="side-by-side"><div><div class="matrix"><table><thead><tr><th>Giver</th><th>Receiver</th><th>Judgment</th></tr></thead><tbody>${rows || '<tr><td colspan="3">No reviewed pairs yet.</td></tr>'}</tbody></table></div></div>
     <form id="review-form" class="card"><h3>Review a pair</h3><label class="field">Giver<select name="giver" required>${options}</select></label><br><label class="field">Receiver<select name="receiver" required>${options}</select></label><p class="muted" style="font-size:12px;margin-top:18px">${state.mode === 'sample' ? 'Sample mode marks new pairs UNCLEAR; only the four displayed judgments are seeded examples.' : 'GenLayer validators independently judge this frozen pair. A transaction may take several minutes.'}</p><button class="button primary" type="submit" ${state.busy || offers.length < 2 ? 'disabled' : ''}>Request judgment</button></form></div>`;
