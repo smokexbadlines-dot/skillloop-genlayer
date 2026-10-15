@@ -8,6 +8,6 @@
 
 **1:05–1:30 — Member consent.** Show the three distinct member addresses and their acceptance transactions if completed. State that every member must accept before the delivery period begins. A decline or unanswered deadline releases the other members, while the declining or absent member's offer is retired.
 
-**1:30–1:50 — Delivery and limits.** If the live cycle is active, show a delivery link and the receiver-only confirmation control. Explain that this version records members' confirmations; it does not independently verify the service or hold GEN in escrow.
+**1:30–1:50 — Delivery and limits.** The recorded live cycle is ACTIVE with 0/3 deliveries confirmed. Describe the member-only delivery and receiver confirmation flow as implemented and locally tested; do not claim a live completion. This version records members' confirmations but does not independently verify service quality or hold GEN in escrow.
 
 **1:50–2:00 — Reproducibility.** Open [`proof/manifest.json`](../proof/manifest.json) and run `pnpm verify:live`. The script checks finalized majority agreement, successful execution, expected owners, reviewed edges, and the cycle state. Note that Studionet is a temporary development environment.

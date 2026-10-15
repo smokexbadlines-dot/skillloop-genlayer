@@ -45,7 +45,7 @@ The static output is in `dist/`.
 ## Exchange rules
 
 1. Three different owners post concrete `gives` and `wants` statements. An offer expires 1 to 60 days after posting.
-2. Anyone pays to review a directed pair. A reviewed pair cannot be submitted again; `NO_FIT` and `UNCLEAR` do not qualify.
+2. Anyone can request review of a directed pair. A reviewed pair cannot be submitted again; `NO_FIT` and `UNCLEAR` do not qualify.
 3. Anyone can clear the first eligible three-person cycle. Only reviewed `FIT` edges qualify. The three offers are reserved together.
 4. Each owner has two days to accept. A decline releases the other two offers and retires the declining offer. On expiry, nonresponders are retired.
 5. Once all accept, members have 14 days to submit HTTPS delivery links. Only the receiver of each service can confirm that delivery. All three confirmations mark the cycle `COMPLETED`.
@@ -55,9 +55,10 @@ The contract does not verify that a submitted URL contains the promised work. Co
 ## Source and checks
 
 - `contracts/SkillLoop.py` — contract and view methods.
-- `src/main.js` and `src/style.css` — frontend and GenLayer JS integration.
+- `src/main.js`, `src/wallet.js`, `src/transaction.js`, and `src/style.css` — frontend, EIP-1193 wallet handling, and GenLayer JS integration.
 - `tests/test_skillloop.py` — local contract tests covering cycle completion, negative edges, forged leader result, authorization, replay, reverse orientation, deadlines, and vague input.
-- `proof/` — Studionet transaction manifest and verification script once the live sequence completes.
+- `tests/frontend.test.mjs` — wallet and transaction outcome checks; run with `pnpm test:frontend`.
+- `proof/manifest.json` and `scripts/verify-live.mjs` — recorded Studionet transactions and read-only live verification; run with `pnpm verify:live`.
 
 To run the contract tests, install `genlayer-test` and `genlayer-py` in a Python environment, then run `gltest -q tests/test_skillloop.py`. The test harness in `testing/` handles a Windows temporary-file quirk in the current local `gltest` version. `genvm-lint check contracts/SkillLoop.py` validates runner compatibility.
 

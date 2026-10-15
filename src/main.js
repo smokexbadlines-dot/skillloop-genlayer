@@ -1,6 +1,9 @@
 import { createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
-import { TransactionHashVariant, TransactionStatus } from 'genlayer-js/types';
+import { TransactionHashVariant } from 'genlayer-js/types';
+import proof from '../proof/manifest.json';
+import { connectWalletProvider, verifyWalletProvider } from './wallet.js';
+import { transactionOutcome } from './transaction.js';
 import './style.css';
 
 const contractFromBuild = import.meta.env.VITE_CONTRACT_ADDRESS || '0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e';
@@ -56,11 +59,8 @@ function walletClient() {
 }
 
 async function connectWallet() {
-  if (!window.ethereum) throw new Error('No compatible browser wallet was found.');
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-  if (!accounts?.length) throw new Error('Wallet returned no account.');
-  state.wallet = accounts[0];
-  await walletClient().connect('studionet');
+  const address = await connectWalletProvider(window.ethereum);
+  state.wallet = address;
   render();
 }
 
@@ -77,13 +77,35 @@ async function loadLive() {
 
 async function track(txId) {
   const reader = readClient();
-  await reader.waitForTransactionReceipt({ hash: txId, status: TransactionStatus.FINALIZED, interval: 3000, retries: 100 });
-  const [tx, receipt] = await Promise.all([reader.getTransaction({ hash: txId }), reader.getTransactionReceipt({ hash: txId })]);
-  state.txStatus = `${tx.statusName} / ${tx.result} / ${receipt.status}`;
-  if (tx.statusName !== TransactionStatus.FINALIZED || Number(tx.result) !== 6 || receipt.status !== 'success') throw new Error(`Transaction finalized without successful execution: ${state.txStatus}`);
-  sessionStorage.removeItem('skillloop_tx');
-  await loadLive();
-  toast(`Finalized successfully: ${short(txId)}`);
+  let readFailures = 0;
+  for (let attempt = 0; attempt < 180; attempt++) {
+    let tx;
+    try {
+      tx = await reader.getTransaction({ hash: txId });
+      readFailures = 0;
+    } catch (error) {
+      readFailures++;
+      if (readFailures >= 4) throw new Error(`Cannot read transaction ${short(txId)}. Resume tracking later: ${error.message}`);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      continue;
+    }
+    const outcome = transactionOutcome(tx);
+    const nextStatus = `${outcome.phase} · ${outcome.status}`;
+    if (state.txStatus !== nextStatus) { state.txStatus = nextStatus; render(); }
+    if (outcome.terminal) {
+      sessionStorage.removeItem('skillloop_tx');
+      if (outcome.phase !== 'finalized-success') {
+        throw new Error(`Transaction ended without successful execution: ${nextStatus}. Open its Explorer link for details.`);
+      }
+      await loadLive();
+      toast(`Finalized successfully: ${short(txId)}`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+  state.txStatus = 'Tracking timed out; resume from the transaction link';
+  render();
+  throw new Error('Finality was not reached during this session. Resume tracking before another write.');
 }
 
 async function write(functionName, args = []) {
@@ -93,8 +115,8 @@ async function write(functionName, args = []) {
   const call = { address: state.address, functionName, args };
   state.busy = true; render();
   try {
-    await client.connect('studionet');
-    const txId = await client.writeContract(call);
+    await verifyWalletProvider(window.ethereum, state.wallet);
+    const txId = await client.writeContract({ ...call, value: 0n });
     state.txId = txId;
     sessionStorage.setItem('skillloop_tx', txId);
     state.txStatus = 'Submitted; awaiting finality';
@@ -186,6 +208,17 @@ function renderSettings() {
   return `<div class="card" style="margin-top:28px"><div class="section-head"><div><span class="eyebrow">Network</span><h3 style="margin:8px 0">Studionet contract</h3><span class="muted">Load a deployed SkillLoop address to switch from the sample board to live contract state.</span></div></div><form id="address-form" class="form-actions" style="flex-wrap:wrap"><input id="address-input" aria-label="Contract address" value="${esc(state.address)}" placeholder="0x… contract address" style="min-width:280px;flex:1;background:#0e2226;color:#e8f2ed;border:1px solid #416063;border-radius:9px;padding:12px" /><button class="button" type="submit">Load contract</button>${button('Use sample board', 'sample', 'type="button"', 'ghost')}</form>${state.mode === 'live' && state.address ? `<p class="muted" style="font-size:12px;margin-top:14px">Contract: <a href="${explorer(state.address, 'address')}" target="_blank" rel="noopener noreferrer">${esc(state.address)}</a></p>` : ''}</div>`;
 }
 
+function renderProof() {
+  if (state.mode !== 'live' || state.address.toLowerCase() !== proof.contract.toLowerCase()) return '';
+  const links = [
+    ['Three FIT judgments', 'fit_1_to_3'],
+    ['NO_FIT judgment', 'no_fit_1_to_2'],
+    ['Cycle reservation', 'clear_cycle_1'],
+    ['Third acceptance', 'accept_offer_2'],
+  ];
+  return `<div class="card proof-card"><span class="eyebrow">Recorded Studionet proof · ${esc(proof.deployed_at_utc)}</span><h3>Inspect finalized transactions</h3><p>These links document the original demo. The offer board above is read live from the contract and can change later.</p><div class="proof-links">${links.map(([label, key]) => `<a href="${explorer(proof.transactions[key])}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`).join('')}</div></div>`;
+}
+
 function render() {
   const board = state.board;
   $('#app').innerHTML = `<header class="topbar"><div class="shell topbar-inner"><a class="brand" href="#top"><span class="brand-mark"></span>SkillLoop</a><div class="top-actions"><span class="mode ${state.mode === 'live' ? 'live' : ''}"><i class="mode-dot"></i>${state.mode === 'live' ? 'Studionet' : 'Sample board'}</span>${button(state.wallet ? short(state.wallet) : 'Connect wallet', 'connect', '', 'small')}</div></div></header>
@@ -193,10 +226,10 @@ function render() {
     <section class="section"><div class="shell"><div class="notice">${state.mode === 'sample' ? '<b>Sample board:</b> These offers and judgments are examples stored in this browser. They are not validator results or onchain proof.' : '<b>Live Studionet:</b> Board state is read from the configured contract. Verify each transaction in the Explorer after finalization.'}</div><div class="stats"><div class="stat"><strong>${board.offer_count}</strong><span>Offers posted</span></div><div class="stat"><strong>${board.edges.filter((e) => e.verdict === 'FIT').length}</strong><span>FIT edges</span></div><div class="stat"><strong>${board.cycle_count}</strong><span>Cycles formed</span></div><div class="stat"><strong>${board.cycles.filter((c) => c.status === 'COMPLETED').length}</strong><span>Completed cycles shown</span></div></div>
     ${state.txId ? `<div class="notice" style="margin-top:16px"><b>Latest transaction:</b> <a class="tx" href="${explorer(state.txId)}" target="_blank" rel="noopener noreferrer">${esc(state.txId)}</a> · ${esc(state.txStatus || 'Tracking may be resumed after refresh')} ${sessionStorage.getItem('skillloop_tx') ? button('Resume tracking', 'resume', '', 'small') : ''}</div>` : ''}
     <nav class="tabs" aria-label="App sections">${[['board','Offer board'],['review','Match review'],['cycles','Cycles'],['create','Create offer']].map(([id,label]) => `<button class="tab ${state.tab === id ? 'active' : ''}" data-action="tab" data-tab="${id}">${label}</button>`).join('')}</nav>
-    <section id="panel">${state.tab === 'board' ? renderBoard() : state.tab === 'review' ? renderReview() : state.tab === 'cycles' ? renderCycles() : renderCreate()}</section>${renderSettings()}</div></section></main>
+    <section id="panel">${state.tab === 'board' ? renderBoard() : state.tab === 'review' ? renderReview() : state.tab === 'cycles' ? renderCycles() : renderCreate()}</section>${renderProof()}${renderSettings()}</div></section></main>
     <footer class="footer"><div class="shell footer-inner"><span>SkillLoop · Semantic matching, deterministic clearing</span><span>Studionet · Experimental software service commitments</span></div></footer>`;
   const expiry = $('#offer-form input[name="expires"]');
-  if (expiry) { expiry.min = new Date(Date.now() + 86400000).toISOString().slice(0,10); expiry.max = new Date(Date.now() + 60*86400000).toISOString().slice(0,10); expiry.value = new Date(Date.now() + 14*86400000).toISOString().slice(0,10); }
+  if (expiry) { expiry.min = new Date(Date.now() + 2*86400000).toISOString().slice(0,10); expiry.max = new Date(Date.now() + 59*86400000).toISOString().slice(0,10); expiry.value = new Date(Date.now() + 14*86400000).toISOString().slice(0,10); }
 }
 
 async function handleClick(buttonEl) {
@@ -210,7 +243,7 @@ async function handleClick(buttonEl) {
   if (action === 'accept') return write('accept_cycle', [Number(buttonEl.dataset.id)]);
   if (action === 'decline') return write('decline_cycle', [Number(buttonEl.dataset.id)]);
   if (action === 'expire') return write('expire_cycle', [Number(buttonEl.dataset.id)]);
-  if (action === 'deliver') { const url = prompt('HTTPS delivery artifact URL'); if (url) return write('submit_delivery', [Number(buttonEl.dataset.id), url.trim()]); return; }
+  if (action === 'deliver') { const url = prompt('HTTPS delivery artifact URL'); if (!url) return; const clean = url.trim(); if (!/^https:\/\/[^\s]+$/i.test(clean)) throw new Error('Enter a public HTTPS URL for the finished work.'); return write('submit_delivery', [Number(buttonEl.dataset.id), clean]); }
   if (action === 'confirm') return write('confirm_delivery', [Number(buttonEl.dataset.id), Number(buttonEl.dataset.giver)]);
 }
 
@@ -225,9 +258,11 @@ document.addEventListener('submit', async (event) => {
   try {
     if (event.target.id === 'address-form') { state.address = $('#address-input').value.trim(); await loadLive(); toast('Loaded live SkillLoop board.'); }
     if (event.target.id === 'review-form') { const data = new FormData(event.target); const giver = Number(data.get('giver')); const receiver = Number(data.get('receiver')); if (giver === receiver) throw new Error('Select two different offers.'); if (state.board.edges.some((edge) => edge.giver === giver && edge.receiver === receiver)) throw new Error('This pair has already been reviewed.'); await write('review_match', [giver, receiver]); }
-    if (event.target.id === 'offer-form') { const data = new FormData(event.target); const expires = Math.floor(new Date(`${data.get('expires')}T12:00:00Z`).getTime()/1000); await write('create_offer', [data.get('title').trim(), data.get('gives').trim(), data.get('wants').trim(), expires]); }
+    if (event.target.id === 'offer-form') { const data = new FormData(event.target); const expires = Math.floor(new Date(`${data.get('expires')}T12:00:00Z`).getTime()/1000); const secondsAway = expires - Date.now()/1000; if (secondsAway < 86400 || secondsAway > 60*86400) throw new Error('Expiry must be 1–60 days away.'); await write('create_offer', [data.get('title').trim(), data.get('gives').trim(), data.get('wants').trim(), expires]); }
   } catch (error) { toast(error?.message || String(error), true); }
 });
+
+window.ethereum?.on?.('accountsChanged', () => { state.wallet = ''; render(); toast('Wallet account changed. Connect again before writing.'); });
 
 render();
 if (state.mode === 'live') loadLive().catch((error) => { state.mode = 'sample'; state.board = sampleBoard(); render(); toast(`Could not load configured contract: ${error.message}`, true); });

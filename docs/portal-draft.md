@@ -14,4 +14,6 @@
 
 **Contract explorer:** https://explorer-studio.genlayer.com/address/0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e
 
-**Source and proof:** Add the source repository URL and the final private/public frontend URL after publishing. `proof/manifest.json` contains the transaction hashes.
+**Frontend:** https://skillloop-genlayer.opalfairy1.chatgpt.site/ (currently owner-private; reviewers need access before using this link).
+
+**Source and proof:** `proof/manifest.json` contains the transaction hashes. A local source bundle is available, but no public GitHub repository is authorized or linked. Keep the Portal submission as a draft while its required GitHub Repository field is empty.

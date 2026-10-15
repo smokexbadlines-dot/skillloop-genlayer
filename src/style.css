@@ -55,6 +55,11 @@ h2 { font-size: 32px; letter-spacing: -.04em; margin-bottom: 6px; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .card { border: 1px solid #305054; border-radius: 16px; padding: 21px; background: #142b2f; min-width: 0; }
 .card:hover { border-color: #638478; }
+.proof-card { margin-top: 28px; border-color: #4c765a; }
+.proof-card h3 { margin-bottom: 8px; }
+.proof-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.proof-links a { border: 1px solid #557b64; border-radius: 9px; padding: 9px 12px; color: #c6fca3; font-size: 12px; font-weight: 700; text-decoration: none; }
+.proof-links a:hover, .proof-links a:focus-visible { background: #244535; border-color: #b9f47c; }
 .card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .tag { padding: 5px 9px; font-size: 11px; letter-spacing: .04em; font-weight: 700; border-radius: 100px; background: #294f42; color: #c6fca3; }
 .tag.bad { background: #554332; color: #fbd199; }
