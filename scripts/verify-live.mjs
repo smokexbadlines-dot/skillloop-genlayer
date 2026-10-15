@@ -14,6 +14,7 @@ assert(manifest.chain_id === 61999 && /^0x[0-9a-fA-F]{40}$/.test(manifest.contra
 const sourceHash = createHash('sha256').update(readFileSync(new URL('../contracts/SkillLoop.py', import.meta.url))).digest('hex');
 assert(sourceHash === manifest.contract_source_sha256, 'Contract source hash mismatch');
 
+try {
 if (!boardOnly) {
   for (const [label, hash] of Object.entries(manifest.transactions)) {
     const tx = await client.getTransaction({ hash });
@@ -45,3 +46,12 @@ if (manifest.expected_cycle) {
   assert(board.offers.filter((offer) => expected.offers.includes(offer.id)).every((offer) => offer.status === 'COMMITTED'), 'Cycle offers are not committed');
 }
 console.log(`PASS board: ${board.offer_count} offers, ${board.edges.length} reviewed edges, ${board.cycle_count} cycles`);
+} catch (error) {
+  const retryAfter = error?.cause?.data?.retry_after_seconds;
+  if (Number.isFinite(retryAfter)) {
+    console.error(`Studionet RPC rate limit reached. Retry after ${retryAfter} seconds.`);
+  } else {
+    console.error(`Live verification failed: ${error?.message || String(error)}`);
+  }
+  process.exitCode = 1;
+}
