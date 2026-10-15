@@ -71,6 +71,38 @@ def test_cycle_clears_and_completes(direct_vm, direct_deploy, direct_alice, dire
         contract.confirm_delivery(cycle_id, c)
 
 
+def test_delivery_url_and_deadline_guards(direct_vm, direct_deploy, direct_alice, direct_bob, direct_charlie):
+    contract = direct_deploy(CONTRACT)
+    a, b, c = three_offers(direct_vm, contract, direct_alice, direct_bob, direct_charlie)
+    for giver, receiver in ((a, b), (b, c), (c, a)):
+        review(direct_vm, contract, giver, receiver, "FIT")
+    cycle_id = contract.clear_next_cycle()
+    for owner in (direct_alice, direct_bob, direct_charlie):
+        direct_vm.sender = owner
+        contract.accept_cycle(cycle_id)
+
+    direct_vm.sender = direct_alice
+    for url in ("http://example.com/work", "https://user@example.com/work", "https://example.com/work#draft", "https://example.com/" + "x" * 400):
+        with direct_vm.expect_revert("Delivery needs an HTTPS URL"):
+            contract.submit_delivery(cycle_id, url)
+    with direct_vm.expect_revert("Delivery missing"):
+        direct_vm.sender = direct_bob
+        contract.confirm_delivery(cycle_id, a)
+
+    direct_vm.sender = direct_alice
+    contract.submit_delivery(cycle_id, "https://example.com/finished-work")
+    with direct_vm.expect_revert("Delivery already submitted"):
+        contract.submit_delivery(cycle_id, "https://example.com/other-work")
+
+    deadline = json.loads(contract.get_cycle(cycle_id))["deliver_by"]
+    warp(direct_vm, datetime.fromtimestamp(deadline, timezone.utc).isoformat())
+    with direct_vm.expect_revert("Delivery window is closed"):
+        contract.submit_delivery(cycle_id, "https://example.com/late-work")
+    direct_vm.sender = direct_bob
+    with direct_vm.expect_revert("Confirmation window is closed"):
+        contract.confirm_delivery(cycle_id, a)
+
+
 def test_negative_match_blocks_clear_and_replay(direct_vm, direct_deploy, direct_alice, direct_bob, direct_charlie):
     contract = direct_deploy(CONTRACT)
     a, b, c = three_offers(direct_vm, contract, direct_alice, direct_bob, direct_charlie)

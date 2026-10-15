@@ -99,8 +99,15 @@ async function track(txId) {
       if (outcome.phase !== 'finalized-success') {
         throw new Error(`Transaction ended without successful execution: ${nextStatus}. Open its Explorer link for details.`);
       }
-      await loadLive();
       toast(`Finalized successfully: ${short(txId)}`);
+      try {
+        await loadLive();
+      } catch (error) {
+        state.mode = 'sample';
+        state.board = sampleBoard();
+        state.liveError = `Transaction finalized, but the board could not be refreshed: ${error.message}`;
+        render();
+      }
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -112,6 +119,7 @@ async function track(txId) {
 
 async function write(functionName, args = []) {
   if (state.mode !== 'live') return sampleWrite(functionName, args);
+  if (state.busy) throw new Error('Wait for the current wallet action to finish.');
   if (state.txId && sessionStorage.getItem('skillloop_tx')) throw new Error('Track the pending transaction before another write.');
   const client = walletClient();
   const call = { address: state.address, functionName, args };
@@ -194,9 +202,13 @@ function renderCycles() {
       const myOffer = state.board.offers.find((o) => cycle.offers.includes(o.id) && o.owner.toLowerCase() === state.wallet.toLowerCase());
       const myIndex = myOffer ? cycle.offers.indexOf(myOffer.id) : -1;
       const incoming = myIndex < 0 ? null : state.board.offers.find((o) => o.id === cycle.offers[(myIndex + 2) % 3]);
-      const proposedActions = cycle.status === 'PROPOSED' && (state.mode === 'sample' || myOffer) ? `${state.mode === 'sample' || !cycle.accepted_offers?.includes(myOffer.id) ? button('Accept my place', 'accept', `data-id="${cycle.id}"`, 'small primary') : ''}${state.mode === 'live' ? button('Decline', 'decline', `data-id="${cycle.id}"`, 'small ghost') : ''}` : '';
-      const activeActions = cycle.status === 'ACTIVE' && state.mode === 'live' && myOffer ? `${!myOffer.delivery_url ? button('Submit delivery', 'deliver', `data-id="${cycle.id}"`, 'small') : ''}${incoming?.delivery_url && !incoming.confirmed ? button('Confirm received work', 'confirm', `data-id="${cycle.id}" data-giver="${incoming.id}"`, 'small') : ''}` : '';
-      return `<article class="cycle-card" style="margin-bottom:16px"><div class="card-top"><span class="eyebrow">Cycle ${cycle.id}</span><span class="tag ${tagClass(cycle.status)}">${esc(cycle.status)}</span></div><div class="cycle-nodes">${cycle.offers.map((id) => `<div class="cycle-node"><strong>${esc(state.board.offers.find((o) => o.id === id)?.title || `Offer ${id}`)}</strong><span>Offer #${id}</span></div><span class="cycle-arrow">→</span>`).join('')}</div><p class="muted">${cycle.accepted_count}/3 accepted · ${cycle.confirmed_count}/3 deliveries confirmed · Accept by ${date(cycle.accept_by)}${cycle.deliver_by ? ` · Deliver by ${date(cycle.deliver_by)}` : ''}</p><div class="hero-buttons">${proposedActions}${activeActions}${['PROPOSED','ACTIVE'].includes(cycle.status) ? button('Close after deadline', 'expire', `data-id="${cycle.id}"`, 'small ghost') : ''}</div></article>`;
+      const now = Date.now() / 1000;
+      const canAccept = cycle.status === 'PROPOSED' && now < Number(cycle.accept_by);
+      const canDeliver = cycle.status === 'ACTIVE' && now < Number(cycle.deliver_by);
+      const proposedActions = canAccept && (state.mode === 'sample' || myOffer) ? `${state.mode === 'sample' || !cycle.accepted_offers?.includes(myOffer.id) ? button('Accept my place', 'accept', `data-id="${cycle.id}"`, 'small primary') : ''}${state.mode === 'live' ? button('Decline', 'decline', `data-id="${cycle.id}"`, 'small ghost') : ''}` : '';
+      const activeActions = canDeliver && state.mode === 'live' && myOffer ? `${!myOffer.delivery_url ? button('Submit delivery', 'deliver', `data-id="${cycle.id}"`, 'small') : ''}${incoming?.delivery_url && !incoming.confirmed ? button('Confirm received work', 'confirm', `data-id="${cycle.id}" data-giver="${incoming.id}"`, 'small') : ''}` : '';
+      const deadlinePassed = (cycle.status === 'PROPOSED' && !canAccept) || (cycle.status === 'ACTIVE' && !canDeliver);
+      return `<article class="cycle-card" style="margin-bottom:16px"><div class="card-top"><span class="eyebrow">Cycle ${cycle.id}</span><span class="tag ${tagClass(cycle.status)}">${esc(cycle.status)}</span></div><div class="cycle-nodes">${cycle.offers.map((id) => { const offer = state.board.offers.find((o) => o.id === id); return `<div class="cycle-node"><strong>${esc(offer?.title || `Offer ${id}`)}</strong><span>Offer #${id}${offer?.confirmed ? ' · confirmed' : offer?.delivery_url ? ' · submitted' : ''}</span>${offer?.delivery_url?.startsWith('https://') ? `<a class="delivery-link" href="${esc(offer.delivery_url)}" target="_blank" rel="noopener noreferrer">Inspect delivery ↗</a>` : ''}</div><span class="cycle-arrow">→</span>`; }).join('')}</div><p class="muted">${cycle.accepted_count}/3 accepted · ${cycle.confirmed_count}/3 deliveries confirmed · Accept by ${date(cycle.accept_by)}${cycle.deliver_by ? ` · Deliver by ${date(cycle.deliver_by)}` : ''}</p>${incoming?.delivery_url && !incoming.confirmed && canDeliver ? `<p class="muted">Inspect offer #${incoming.id}'s delivery before confirming receipt.</p>` : ''}<div class="hero-buttons">${proposedActions}${activeActions}${deadlinePassed ? button('Close after deadline', 'expire', `data-id="${cycle.id}"`, 'small ghost') : ''}</div></article>`;
     }).join('') : `<div class="empty">${state.mode === 'sample' ? 'The sample already includes three FIT edges. Clear the next cycle to see the reservation.' : 'No cycle has cleared yet. Review three compatible directed pairs, then clear a cycle.'}</div>`}`;
 }
 
@@ -245,7 +257,7 @@ async function handleClick(buttonEl) {
   if (action === 'accept') return write('accept_cycle', [Number(buttonEl.dataset.id)]);
   if (action === 'decline') return write('decline_cycle', [Number(buttonEl.dataset.id)]);
   if (action === 'expire') return write('expire_cycle', [Number(buttonEl.dataset.id)]);
-  if (action === 'deliver') { const url = prompt('HTTPS delivery artifact URL'); if (!url) return; const clean = url.trim(); if (!/^https:\/\/[^\s]+$/i.test(clean)) throw new Error('Enter a public HTTPS URL for the finished work.'); return write('submit_delivery', [Number(buttonEl.dataset.id), clean]); }
+  if (action === 'deliver') { const url = prompt('Public HTTPS URL for the finished work'); if (!url) return; const clean = url.trim(); if (!/^https:\/\/[^\s]+$/i.test(clean) || clean.length > 400 || /[@#]/.test(clean)) throw new Error('Enter an HTTPS delivery URL under 401 characters, without @ or #.'); return write('submit_delivery', [Number(buttonEl.dataset.id), clean]); }
   if (action === 'confirm') return write('confirm_delivery', [Number(buttonEl.dataset.id), Number(buttonEl.dataset.giver)]);
 }
 

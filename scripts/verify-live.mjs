@@ -7,19 +7,23 @@ import { TransactionHashVariant, TransactionStatus } from 'genlayer-js/types';
 const manifest = JSON.parse(readFileSync(new URL('../proof/manifest.json', import.meta.url), 'utf8'));
 const client = createClient({ chain: studionet });
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const boardOnly = process.argv.slice(2).includes('--board-only');
+assert(process.argv.slice(2).every((arg) => arg === '--board-only'), 'Unknown verification option');
 
 assert(manifest.chain_id === 61999 && /^0x[0-9a-fA-F]{40}$/.test(manifest.contract), 'Unexpected network or contract');
 const sourceHash = createHash('sha256').update(readFileSync(new URL('../contracts/SkillLoop.py', import.meta.url))).digest('hex');
 assert(sourceHash === manifest.contract_source_sha256, 'Contract source hash mismatch');
 
-for (const [label, hash] of Object.entries(manifest.transactions)) {
-  const tx = await client.getTransaction({ hash });
-  assert(tx.statusName === TransactionStatus.FINALIZED, `${label}: ${tx.statusName}`);
-  assert(Number(tx.result) === 6, `${label}: consensus result ${tx.result}`);
-  const receipt = await client.getTransactionReceipt({ hash });
-  assert(receipt.status === 'success', `${label}: EVM receipt ${receipt.status}`);
-  console.log(`PASS ${label}: finalized, majority agree, successful execution`);
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+if (!boardOnly) {
+  for (const [label, hash] of Object.entries(manifest.transactions)) {
+    const tx = await client.getTransaction({ hash });
+    assert(tx.statusName === TransactionStatus.FINALIZED, `${label}: ${tx.statusName}`);
+    assert(Number(tx.result) === 6, `${label}: consensus result ${tx.result}`);
+    const receipt = await client.getTransactionReceipt({ hash });
+    assert(receipt.status === 'success', `${label}: EVM receipt ${receipt.status}`);
+    console.log(`PASS ${label}: finalized, majority agree, successful execution`);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+  }
 }
 
 const raw = await client.readContract({

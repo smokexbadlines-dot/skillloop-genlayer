@@ -42,7 +42,7 @@ To build a static frontend:
 pnpm build
 ```
 
-Run `pnpm test:frontend` for EIP-1193 wallet and transaction-status checks, and `pnpm verify:live` to recheck the recorded finalized transactions and board state on Studionet.
+Run `pnpm test:frontend` for EIP-1193 wallet and transaction-status checks, and `pnpm verify:live` to recheck the recorded finalized transactions and board state on Studionet. Use `pnpm verify:live --board-only` to recheck just the current board without spending RPC calls on every recorded transaction.
 
 The static output is in `dist/`.
 
@@ -52,7 +52,7 @@ The static output is in `dist/`.
 2. Anyone can request review of a directed pair. A reviewed pair cannot be submitted again; `NO_FIT` and `UNCLEAR` do not qualify.
 3. Anyone can clear the first eligible three-person cycle. Only reviewed `FIT` edges qualify. The three offers are reserved together.
 4. Each owner has two days to accept. A decline releases the other two offers and retires the declining offer. On expiry, nonresponders are retired.
-5. Once all accept, members have 14 days to submit HTTPS delivery links. Only the receiver of each service can confirm that delivery. All three confirmations mark the cycle `COMPLETED`.
+5. Once all accept, members have 14 days to submit public HTTPS delivery links. The cycle view links each submitted artifact so the receiver can inspect it before confirming. Only the receiver of each service can confirm that delivery. All three confirmations mark the cycle `COMPLETED`.
 
 The contract does not verify that a submitted URL contains the promised work. Confirmation represents the receiver's statement. There is no GEN escrow, payment, dispute resolution, or offchain reputation in this version. Service commitments are public onchain, so members should avoid private information in descriptions and links.
 
@@ -60,7 +60,7 @@ The contract does not verify that a submitted URL contains the promised work. Co
 
 - `contracts/SkillLoop.py` — contract and view methods.
 - `src/main.js`, `src/wallet.js`, `src/transaction.js`, and `src/style.css` — frontend, EIP-1193 wallet handling, and GenLayer JS integration.
-- `tests/test_skillloop.py` — local contract tests covering cycle completion, negative edges, forged leader result, authorization, replay, reverse orientation, deadlines, and vague input.
+- `tests/test_skillloop.py` — local contract tests covering cycle completion, negative edges, forged leader result, authorization, replay, reverse orientation, delivery URL and deadline guards, and vague input.
 - `tests/frontend.test.mjs` — wallet and transaction outcome checks; run with `pnpm test:frontend`.
 - `proof/manifest.json` and `scripts/verify-live.mjs` — recorded Studionet transactions and read-only live verification; run with `pnpm verify:live`.
 
