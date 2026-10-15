@@ -61,7 +61,7 @@ The contract does not verify that a submitted URL contains the promised work. Co
 - `contracts/SkillLoop.py` — contract and view methods.
 - `src/main.js`, `src/wallet.js`, `src/transaction.js`, and `src/style.css` — frontend, EIP-1193 wallet handling, and GenLayer JS integration.
 - `tests/test_skillloop.py` — local contract tests covering cycle completion, negative edges, forged leader result, authorization, replay, reverse orientation, delivery URL and deadline guards, and vague input.
-- `tests/frontend.test.mjs` — wallet and transaction outcome checks; run with `pnpm test:frontend`.
+- `tests/frontend.test.mjs` — wallet, stable SDK write routing, and transaction outcome checks; run with `pnpm test:frontend`.
 - `proof/manifest.json` and `scripts/verify-live.mjs` — recorded Studionet transactions and read-only live verification; run with `pnpm verify:live`.
 
 To run the contract tests, install `genlayer-test` and `genlayer-py` in a Python environment, then run `gltest -q tests/test_skillloop.py`. The test harness in `testing/` handles a Windows temporary-file quirk in the current local `gltest` version. `genvm-lint check contracts/SkillLoop.py` validates runner compatibility.
