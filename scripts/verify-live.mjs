@@ -45,8 +45,14 @@ for (const expected of manifest.expected_edges) {
 }
 if (manifest.expected_cycle) {
   const expected = manifest.expected_cycle;
-  assert(board.cycles.some((cycle) => cycle.id === expected.id && cycle.status === expected.status && cycle.accepted_count === expected.accepted_count && JSON.stringify(cycle.offers) === JSON.stringify(expected.offers)), 'Cycle state mismatch');
+  assert(board.cycles.some((cycle) => cycle.id === expected.id && cycle.status === expected.status && cycle.accepted_count === expected.accepted_count && (expected.confirmed_count === undefined || cycle.confirmed_count === expected.confirmed_count) && JSON.stringify(cycle.offers) === JSON.stringify(expected.offers)), 'Cycle state mismatch');
   assert(board.offers.filter((offer) => expected.offers.includes(offer.id)).every((offer) => offer.status === 'COMMITTED'), 'Cycle offers are not committed');
+}
+for (const [id, expected] of Object.entries(manifest.expected_deliveries || {})) {
+  const offer = board.offers.find((item) => item.id === Number(id));
+  assert(offer, `Delivery offer ${id} missing`);
+  assert(offer.delivery_url === expected.url, `Offer ${id} delivery URL mismatch`);
+  assert(offer.confirmed === expected.confirmed, `Offer ${id} confirmation mismatch`);
 }
 console.log(`PASS board: ${board.offer_count} offers, ${board.edges.length} reviewed edges, ${board.cycle_count} cycles`);
 } catch (error) {

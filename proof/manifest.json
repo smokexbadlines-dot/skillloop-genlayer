@@ -6,7 +6,8 @@
   "runner": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
   "deployed_at_utc": "2026-10-14",
   "verified_at_utc": "2026-10-15T12:47:28Z",
-  "site_source_commit": "f331ac68ade8b39d045f2567d4f7f59f53fcde02",
+  "submission_scope": "matching_reservation_and_owner_consent",
+  "proof_source_commit": "88d7078da8d57c6845037d7c020aa22fc551c353",
   "public_source_url": "https://github.com/smokexbadlines-dot/skillloop-genlayer",
   "contract_source_sha256": "bfd378bc106f83e9a479bcc87f359be88ab4e7d86b152864983ef13aa14341eb",
   "transactions": {
@@ -37,6 +38,11 @@
     { "giver": 2, "receiver": 1, "verdict": "FIT" },
     { "giver": 1, "receiver": 2, "verdict": "NO_FIT" }
   ],
-  "expected_cycle": { "id": 1, "offers": [1, 3, 2], "status": "ACTIVE", "accepted_count": 3 },
+  "expected_cycle": { "id": 1, "offers": [1, 3, 2], "status": "ACTIVE", "accepted_count": 3, "confirmed_count": 0 },
+  "expected_deliveries": {
+    "1": { "url": "", "confirmed": false },
+    "2": { "url": "", "confirmed": false },
+    "3": { "url": "", "confirmed": false }
+  },
   "expected_offer_statuses": { "4": "CANCELLED" }
 }

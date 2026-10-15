@@ -1,10 +1,10 @@
 # SkillLoop
 
-SkillLoop is a GenLayer Native contributor exchange. Three independent people can each offer a specific software service and request another. Validators judge whether an offered service covers a requested one. Contract code then finds a closed three-person exchange, reserves its offers together, and lets the three members accept and record delivery.
+SkillLoop is a GenLayer Native three-way matching and consent prototype for software-service commitments. Each wallet can offer a specific service and request another. Validators judge whether an offered service covers a requested one. Contract code finds a closed cycle among three distinct owner addresses, reserves its offers together, and records each owner's acceptance. The contract also supports delivery links and receiver confirmations, but the public demo has not exercised those steps.
 
 **Deployed Studionet contract:** [`0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e`](https://explorer-studio.genlayer.com/address/0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e). Studionet is a temporary development network; its state can reset.
 
-**Live app:** [skillloop-genlayer.opalfairy1.chatgpt.site](https://skillloop-genlayer.opalfairy1.chatgpt.site/). The public board needs no wallet to inspect. The recorded demo proves matching, cycle reservation, and three-member acceptance. A separate browser-wallet QA offer was created and then cancelled on Studionet; no delivery has been confirmed.
+**Live app:** [skillloop-genlayer.opalfairy1.chatgpt.site](https://skillloop-genlayer.opalfairy1.chatgpt.site/). The public board needs no wallet to inspect. The submission scope is validator-reviewed matching, deterministic cycle reservation, and three-owner consent, proven by finalized Studionet transactions. A separate browser-wallet QA offer was created and then cancelled. The demo does not prove distinct human participants, service delivery, or a completed exchange.
 
 ## What is native here
 
@@ -22,7 +22,7 @@ flowchart LR
   E --> C[Deterministic three-person cycle scan]
   C --> R[Atomic reservation]
   R --> X[Three member acceptances]
-  X --> D[Delivery URLs and receiver confirmations]
+  X -.-> D[Delivery URLs and receiver confirmations: implemented, not live-proven]
 ```
 
 ## Run the app
@@ -46,7 +46,7 @@ Run `pnpm test:frontend` for EIP-1193 wallet and transaction-status checks, and 
 
 The static output is in `dist/`.
 
-## Exchange rules
+## Matching and follow-through rules
 
 1. Three different owners post concrete `gives` and `wants` statements. An offer expires 1 to 60 days after posting.
 2. Anyone can request review of a directed pair. A reviewed pair cannot be submitted again; `NO_FIT` and `UNCLEAR` do not qualify.
@@ -55,6 +55,8 @@ The static output is in `dist/`.
 5. Once all accept, members have 14 days to submit public HTTPS delivery links. The cycle view links each submitted artifact so the receiver can inspect it before confirming. Only the receiver of each service can confirm that delivery. All three confirmations mark the cycle `COMPLETED`.
 
 The contract does not verify that a submitted URL contains the promised work. Confirmation represents the receiver's statement. There is no GEN escrow, payment, dispute resolution, or offchain reputation in this version. Service commitments are public onchain, so members should avoid private information in descriptions and links.
+
+For this submission, only the offer, judgment, clearing, and acceptance steps have live proof. Delivery and confirmation are implemented and locally tested, but remain outside the demonstrated claim. See [the live completion checklist](docs/live-completion-checklist.md) for the exact conditions needed to prove that later stage.
 
 ## Source and checks
 

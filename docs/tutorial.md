@@ -2,6 +2,8 @@
 
 SkillLoop is a small barter system for software work. A member states one service they can provide and one service they need. Two people rarely have exactly reciprocal needs, so the app looks for a three-person loop. If Alice can do the work Charlie needs, Charlie can do the work Bob needs, and Bob can do the work Alice needs, all three can make a reciprocal exchange without pricing their services in GEN.
 
+The public Studionet demonstration in this release stops at matching, atomic reservation, and three owner-address acceptances. It does not establish three different human participants or a completed service exchange. Delivery and receiver confirmation are implemented and covered by local contract tests, but have no live proof in this release.
+
 The difficult part is deciding whether two descriptions are compatible. String equality is too strict: “API reference docs” and “documentation with request and response examples” may describe the same deliverable. A generic keyword matcher is too loose: “test suite” and “accessibility audit” both sound like software quality work, but they are not interchangeable. SkillLoop uses GenLayer validator judgment for this narrow classification and ordinary contract code for everything that can be deterministic.
 
 ## 1. Pin and probe the execution environment
