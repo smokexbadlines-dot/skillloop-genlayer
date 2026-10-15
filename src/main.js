@@ -231,8 +231,10 @@ function renderProof() {
     ['NO_FIT judgment', 'no_fit_1_to_2'],
     ['Cycle reservation', 'clear_cycle_1'],
     ['Third acceptance', 'accept_offer_2'],
+    ['Browser-wallet QA offer', 'wallet_qa_offer_4'],
+    ['QA offer cancellation', 'wallet_qa_cancel_4'],
   ];
-  return `<div class="card proof-card"><span class="eyebrow">Recorded Studionet proof · ${esc(proof.deployed_at_utc)}</span><h3>Inspect finalized transactions</h3><p>These links document the original demo. The offer board above is read live from the contract and can change later.</p><div class="proof-links">${links.map(([label, key]) => `<a href="${explorer(proof.transactions[key])}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`).join('')}</div></div>`;
+  return `<div class="card proof-card"><span class="eyebrow">Recorded Studionet proof · ${esc(proof.deployed_at_utc)}</span><h3>Inspect finalized transactions</h3><p>These links document the matching demo and a disposable browser-wallet QA offer that was cancelled. The board above is read live from the contract and can change later.</p><div class="proof-links">${links.map(([label, key]) => `<a href="${explorer(proof.transactions[key])}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`).join('')}</div></div>`;
 }
 
 function render() {

@@ -37,6 +37,9 @@ const board = typeof raw === 'string' ? JSON.parse(raw) : raw;
 for (const [id, owner] of Object.entries(manifest.expected_owners)) {
   assert(board.offers.some((offer) => offer.id === Number(id) && offer.owner.toLowerCase() === owner.toLowerCase()), `Offer ${id} owner mismatch`);
 }
+for (const [id, status] of Object.entries(manifest.expected_offer_statuses || {})) {
+  assert(board.offers.some((offer) => offer.id === Number(id) && offer.status === status), `Offer ${id} status mismatch`);
+}
 for (const expected of manifest.expected_edges) {
   assert(board.edges.some((edge) => edge.giver === expected.giver && edge.receiver === expected.receiver && edge.verdict === expected.verdict), `Missing edge ${expected.giver} → ${expected.receiver}: ${expected.verdict}`);
 }

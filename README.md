@@ -4,7 +4,7 @@ SkillLoop is a GenLayer Native contributor exchange. Three independent people ca
 
 **Deployed Studionet contract:** [`0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e`](https://explorer-studio.genlayer.com/address/0xce9A6dFC2401Db01E1224b4E08c82D99e3a3099e). Studionet is a temporary development network; its state can reset.
 
-**Live app:** [skillloop-genlayer.opalfairy1.chatgpt.site](https://skillloop-genlayer.opalfairy1.chatgpt.site/). The public board needs no wallet to inspect. The recorded demo proves matching, cycle reservation, and three-member acceptance; no delivery has been confirmed.
+**Live app:** [skillloop-genlayer.opalfairy1.chatgpt.site](https://skillloop-genlayer.opalfairy1.chatgpt.site/). The public board needs no wallet to inspect. The recorded demo proves matching, cycle reservation, and three-member acceptance. A separate browser-wallet QA offer was created and then cancelled on Studionet; no delivery has been confirmed.
 
 ## What is native here
 
